@@ -84,6 +84,18 @@ class ActionsController
     }
 
     /**
+     * The optional script ({{ back_in_stock:scripts }}). The same for
+     * everyone, so it can be cached.
+     */
+    public function script(): Response
+    {
+        return response(file_get_contents(__DIR__.'/../../../resources/js/frontend/back-in-stock.js'), 200, [
+            'Content-Type' => 'application/javascript; charset=UTF-8',
+            'Cache-Control' => 'public, max-age=86400',
+        ]);
+    }
+
+    /**
      * A signed-in customer cancelling one of their requests.
      */
     public function cancel(Request $request): JsonResponse|RedirectResponse

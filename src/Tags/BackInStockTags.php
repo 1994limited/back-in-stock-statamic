@@ -95,7 +95,32 @@ class BackInStockTags extends Tags
             $hidden['variant'] = $product->variantKey();
         }
 
-        return $this->actionForm('subscribe', $hidden, $data, honeypot: true);
+        $html = $this->actionForm('subscribe', $hidden, $data, honeypot: true);
+
+        // follow="variant": the script makes the form follow the page's own
+        // variant choice, and show only while that variant is sold out.
+        if ($product === null && ($follow = $this->params->get('follow'))) {
+            $attributes = sprintf(
+                ' data-back-in-stock-follow="%s" data-back-in-stock-sold-out="%s"%s',
+                e((string) $follow),
+                e(json_encode($choices->filter(fn (Product $p) => $p->isSoldOut())->map(fn (Product $p) => $p->variantKey())->values()->all())),
+                ($posted = $isThisForm ? $this->postedVariant() : '') !== '' ? ' data-back-in-stock-posted="'.e($posted).'"' : '',
+            );
+
+            $html = preg_replace('/^<form\b/', '<form'.$attributes, $html, 1);
+        }
+
+        return $html;
+    }
+
+    /**
+     * {{ back_in_stock:scripts }}: the optional script, for follow="variant".
+     */
+    public function scripts(): string
+    {
+        $version = substr(sha1_file(__DIR__.'/../../resources/js/frontend/back-in-stock.js'), 0, 8);
+
+        return '<script src="'.e(route('statamic.back-in-stock.script', ['v' => $version])).'" defer></script>';
     }
 
     /**
@@ -233,7 +258,7 @@ class BackInStockTags extends Tags
      */
     protected function actionForm(string $action, array $fields, array $data = [], bool $honeypot = false): string
     {
-        $known = ['product', 'variant', 'alert', 'redirect', 'error_redirect', 'personal'];
+        $known = ['product', 'variant', 'alert', 'redirect', 'error_redirect', 'personal', 'follow'];
 
         $html = $this->formOpen(url("!/back-in-stock/{$action}"), 'POST', $known);
 
@@ -299,6 +324,16 @@ class BackInStockTags extends Tags
         [$posted, $postedVariant] = array_pad(explode('|', $item, 2), 2, '');
 
         return $posted === $productId && ($variant === null || $variant === '' || $postedVariant === $variant);
+    }
+
+    /**
+     * The variant the last form post was about, after it came back.
+     */
+    protected function postedVariant(): string
+    {
+        $item = session('back_in_stock_item');
+
+        return is_string($item) ? (explode('|', $item, 2)[1] ?? '') : '';
     }
 
     /**

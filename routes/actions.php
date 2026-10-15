@@ -14,6 +14,9 @@ Route::middleware('throttle:back-in-stock')->group(function () {
     Route::post('cancel', [ActionsController::class, 'cancel'])->name('cancel');
 });
 
+// The optional script ({{ back_in_stock:scripts }}).
+Route::get('back-in-stock.js', [ActionsController::class, 'script'])->name('script');
+
 // The links in the emails. They're signed, so they can't be guessed or
 // changed: confirming lasts a few days, unsubscribing doesn't expire.
 // Each opens a page with a button, as mail apps and virus checkers open

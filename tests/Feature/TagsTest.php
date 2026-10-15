@@ -192,4 +192,19 @@ class TagsTest extends TestCase
     {
         $this->assertSame('', trim($this->antlers('{{ back_in_stock:alerts }}x{{ /back_in_stock:alerts }}')));
     }
+
+    #[Test]
+    public function the_form_can_follow_the_pages_own_variant_choice(): void
+    {
+        $this->editions(hardback: 0, paperback: 7);
+        session()->put('back_in_stock_item', 'coral-arithmetic|Hardback');
+
+        $html = $this->antlers('{{ back_in_stock product="coral-arithmetic" follow="variant" }}<label data-back-in-stock-choose><select name="variant">{{ variants }}<option>{{ key }}</option>{{ /variants }}</select></label>{{ /back_in_stock }}');
+
+        $this->assertStringStartsWith('<form data-back-in-stock-follow="variant" data-back-in-stock-sold-out="[&quot;Hardback&quot;]" data-back-in-stock-posted="Hardback"', $html);
+        $this->assertStringNotContainsString(' follow="variant"', $html);
+        $this->assertStringContainsString('/!/back-in-stock/back-in-stock.js?v=', $this->antlers('{{ back_in_stock:scripts }}'));
+
+        $this->get('/!/back-in-stock/back-in-stock.js')->assertOk()->assertHeader('Content-Type', 'application/javascript; charset=UTF-8');
+    }
 }
