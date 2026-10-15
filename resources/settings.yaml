@@ -1,0 +1,142 @@
+tabs:
+  sending:
+    display: Sending
+    sections:
+      -
+        display: 'When stock comes back'
+        instructions: 'People who asked are emailed once, oldest request first. Leave a field empty for the default in config/back-in-stock.php.'
+        fields:
+          -
+            handle: limit
+            field:
+              type: button_group
+              display: 'Who to email'
+              instructions: '"Everyone waiting", or "As many as came back": put 3 back in stock and the 3 people who asked first are emailed (times the multiplier). The rest keep waiting for the next restock.'
+              options:
+                all: 'Everyone waiting'
+                stock: 'As many as came back'
+          -
+            handle: multiplier
+            field:
+              type: integer
+              display: Multiplier
+              instructions: 'Email this many people for each unit back in stock, as not everyone buys. 2 emails 6 people for 3 units.'
+              placeholder: '1'
+              min: 1
+              width: 33
+              if:
+                limit: 'equals stock'
+          -
+            handle: delay
+            field:
+              type: integer
+              display: 'Wait (minutes)'
+              instructions: 'Time to put a mistyped stock level right before anyone is emailed. Needs a queue.'
+              placeholder: '5'
+              min: 0
+              width: 33
+          -
+            handle: per_minute
+            field:
+              type: integer
+              display: 'Emails a minute'
+              instructions: 'The most sent a minute, for mail providers with a limit.'
+              placeholder: '120'
+              min: 1
+              width: 33
+  form:
+    display: Form
+    sections:
+      -
+        display: 'The form'
+        fields:
+          -
+            handle: consent_text
+            field:
+              type: textarea
+              display: 'Consent wording'
+              instructions: 'Next to the tick box, as {{ consent_text }}. Saved with each request, as a record of what people agreed to.'
+              placeholder: 'Email me once when it’s back in stock. Nothing else.'
+  emails:
+    display: Emails
+    sections:
+      -
+        display: Look
+        fields:
+          -
+            handle: logo
+            field:
+              type: assets
+              display: Logo
+              instructions: 'At the top of the emails. A PNG or JPEG works everywhere.'
+              max_files: 1
+              mode: list
+          -
+            handle: accent_colour
+            field:
+              type: color
+              display: 'Brand colour'
+              instructions: 'The band across the top and the button. Text on it turns dark or white, whichever reads better.'
+              default: '#1f2937'
+      -
+        display: 'The confirmation email'
+        instructions: 'Sent as soon as someone asks, with the link that confirms it. Placeholders: :product and :site. Leave empty for the default wording, in each site''s language.'
+        fields:
+          -
+            handle: confirm_subject
+            field:
+              type: text
+              display: Subject
+              placeholder: 'Confirm your back-in-stock alert for :product'
+          -
+            handle: confirm_heading
+            field:
+              type: text
+              display: Heading
+              placeholder: 'One click to confirm'
+          -
+            handle: confirm_intro
+            field:
+              type: textarea
+              display: Introduction
+              placeholder: 'You asked :site to let you know when :product is back in stock. Confirm it’s you, and we’ll email you once when it is.'
+          -
+            handle: confirm_button
+            field:
+              type: text
+              display: Button
+              placeholder: 'Yes, email me'
+      -
+        display: 'The back-in-stock email'
+        instructions: 'Sent once when it''s back. Placeholders: :product and :site.'
+        fields:
+          -
+            handle: restocked_subject
+            field:
+              type: text
+              display: Subject
+              placeholder: ':product is back in stock'
+          -
+            handle: restocked_heading
+            field:
+              type: text
+              display: Heading
+              placeholder: 'It’s back'
+          -
+            handle: restocked_intro
+            field:
+              type: textarea
+              display: Introduction
+              placeholder: 'Good news: :product is back in stock at :site. It may not stay long.'
+          -
+            handle: restocked_button
+            field:
+              type: text
+              display: Button
+              placeholder: 'Take a look'
+          -
+            handle: restocked_footer
+            field:
+              type: textarea
+              display: 'Small print'
+              placeholder: 'You asked us to email you when this was back in stock, so this is the only email you’ll get about it.'

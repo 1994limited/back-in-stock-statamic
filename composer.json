@@ -1,0 +1,66 @@
+{
+    "name": "1994/back-in-stock-statamic",
+    "description": "Back in stock alerts for Cargo: shoppers leave their email on a sold-out product or variant, confirm it, and get one email when it's back.",
+    "type": "statamic-addon",
+    "license": "proprietary",
+    "keywords": [
+        "statamic",
+        "statamic-addon",
+        "cargo",
+        "back in stock",
+        "restock",
+        "waitlist",
+        "e-commerce"
+    ],
+    "authors": [
+        {
+            "name": "1994",
+            "email": "hello@1994.co.uk",
+            "homepage": "https://1994.co.uk"
+        }
+    ],
+    "support": {
+        "email": "hello@1994.co.uk"
+    },
+    "autoload": {
+        "psr-4": {
+            "NineteenNinetyFour\\BackInStock\\": "src"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "NineteenNinetyFour\\BackInStock\\Tests\\": "tests"
+        }
+    },
+    "require": {
+        "php": "^8.3",
+        "duncanmcclean/statamic-cargo": "^1.15",
+        "statamic/cms": "^6.35.1"
+    },
+    "require-dev": {
+        "laravel/pint": "^1.20",
+        "orchestra/testbench": "^10.0|^11.0",
+        "phpunit/phpunit": "^12.0"
+    },
+    "extra": {
+        "statamic": {
+            "name": "Back in Stock",
+            "description": "Back in stock alerts for Cargo. Shoppers leave their email on a sold-out product or variant and get one email when it's back.",
+            "developer": "1994",
+            "developer-url": "https://1994.co.uk"
+        },
+        "laravel": {
+            "providers": [
+                "NineteenNinetyFour\\BackInStock\\ServiceProvider"
+            ]
+        }
+    },
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "pixelfear/composer-dist-plugin": true
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}

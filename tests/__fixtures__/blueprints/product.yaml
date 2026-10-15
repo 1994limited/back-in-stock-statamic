@@ -1,0 +1,24 @@
+title: Product
+fields:
+  -
+    handle: title
+    field:
+      type: text
+  -
+    handle: price
+    field:
+      type: money
+  -
+    handle: stock
+    field:
+      type: integer
+  -
+    handle: product_variants
+    field:
+      type: product_variants
+      option_fields:
+        -
+          handle: stock
+          field:
+            type: integer
+            display: Stock
