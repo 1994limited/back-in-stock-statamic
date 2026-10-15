@@ -6,6 +6,7 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
+use Illuminate\Queue\SerializesModels;
 use NineteenNinetyFour\BackInStock\Models\Alert;
 use NineteenNinetyFour\BackInStock\Settings;
 
@@ -15,7 +16,7 @@ use NineteenNinetyFour\BackInStock\Settings;
  */
 class ConfirmMail extends Mailable
 {
-    use Presents, Queueable;
+    use Presents, Queueable, SerializesModels;
 
     public function __construct(public Alert $alert) {}
 

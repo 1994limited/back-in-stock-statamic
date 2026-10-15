@@ -88,21 +88,21 @@ export default {
         </Header>
 
         <div class="mb-6 grid gap-4 sm:grid-cols-3">
-            <Panel>
+            <Panel class="mb-0!">
                 <div class="px-4 py-3">
                     <div class="text-sm text-gray-600 dark:text-gray-400!">{{ __('Waiting') }}</div>
                     <div class="mt-1 text-2xl font-semibold tabular-nums">{{ stats.waiting }}</div>
                     <div class="text-sm text-gray-600 dark:text-gray-400!">{{ __(stats.products === 1 ? 'for 1 product' : 'for :count products', { count: stats.products }) }}</div>
                 </div>
             </Panel>
-            <Panel>
+            <Panel class="mb-0!">
                 <div class="px-4 py-3">
                     <div class="text-sm text-gray-600 dark:text-gray-400!">{{ __('Emailed') }}</div>
                     <div class="mt-1 text-2xl font-semibold tabular-nums">{{ stats.notified }}</div>
                     <div class="text-sm text-gray-600 dark:text-gray-400!">{{ __('in the last 30 days') }}</div>
                 </div>
             </Panel>
-            <Panel>
+            <Panel class="mb-0!">
                 <div class="px-4 py-3">
                     <div class="text-sm text-gray-600 dark:text-gray-400!">{{ __('Bought after the email') }}</div>
                     <div class="mt-1 text-2xl font-semibold tabular-nums">{{ stats.converted }}<span v-if="stats.rate" class="ml-2 text-base font-normal text-gray-600 dark:text-gray-400!">{{ stats.rate }}</span></div>

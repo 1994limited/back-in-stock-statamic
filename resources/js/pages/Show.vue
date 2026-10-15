@@ -111,27 +111,27 @@ export default {
         </Header>
 
         <div class="mb-6 grid gap-4 sm:grid-cols-4">
-            <Panel>
+            <Panel class="mb-0!">
                 <div class="px-4 py-3">
                     <div class="text-sm text-gray-600 dark:text-gray-400!">{{ __('Stock') }}</div>
                     <div class="mt-2"><Stock :item="item" /></div>
                     <div v-if="item.pending" class="mt-1 text-xs text-gray-600 dark:text-gray-400!">{{ __('Emails going out') }}</div>
                 </div>
             </Panel>
-            <Panel>
+            <Panel class="mb-0!">
                 <div class="px-4 py-3">
                     <div class="text-sm text-gray-600 dark:text-gray-400!">{{ __('Waiting') }}</div>
                     <div class="mt-1 text-2xl font-semibold tabular-nums">{{ item.waiting }}</div>
                     <div class="text-sm text-gray-600 dark:text-gray-400!">{{ __(':count unconfirmed', { count: item.unconfirmed }) }}</div>
                 </div>
             </Panel>
-            <Panel>
+            <Panel class="mb-0!">
                 <div class="px-4 py-3">
                     <div class="text-sm text-gray-600 dark:text-gray-400!">{{ __('Emailed') }}</div>
                     <div class="mt-1 text-2xl font-semibold tabular-nums">{{ item.notified }}</div>
                 </div>
             </Panel>
-            <Panel>
+            <Panel class="mb-0!">
                 <div class="px-4 py-3">
                     <div class="text-sm text-gray-600 dark:text-gray-400!">{{ __('Bought after the email') }}</div>
                     <div class="mt-1 text-2xl font-semibold tabular-nums">{{ item.converted }}</div>
