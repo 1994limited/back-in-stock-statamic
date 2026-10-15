@@ -4,7 +4,7 @@
 -->
 <script>
 import { Widget } from '@statamic/cms/ui';
-import icon from '../../brand/nav-icon.svg?raw';
+import icon from '../icon.js';
 
 export default {
     components: { Widget },

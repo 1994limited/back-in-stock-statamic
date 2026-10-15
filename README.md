@@ -2,6 +2,8 @@
 
 "Tell me when it's back" for [Cargo](https://builtwithcargo.dev). Shoppers leave their email on a sold-out product, or a sold-out variant, and confirm it. When it's back in stock, they get one email. You see what people are waiting for, and who bought when it came back.
 
+![Back in Stock for Statamic and Cargo](docs/marketplace/cover-1600x900.png)
+
 ## Features
 
 - **A form for sold-out products and variants.** One tag, your markup. It shows only while it's sold out, works without JavaScript and on statically cached pages, and can follow the size, colour or edition chosen on the page.

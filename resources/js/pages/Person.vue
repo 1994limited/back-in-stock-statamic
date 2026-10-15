@@ -6,7 +6,7 @@
 import { Head, Link, router } from '@statamic/cms/inertia';
 import { Button, Header, Input, Panel, Table, TableCell, TableColumn, TableColumns, TableRow, TableRows } from '@statamic/cms/ui';
 import StatusBadge from '../components/StatusBadge.vue';
-import icon from '../../brand/nav-icon.svg?raw';
+import icon from '../icon.js';
 
 export default {
     components: { Button, Head, Header, Input, Link, Panel, StatusBadge, Table, TableCell, TableColumn, TableColumns, TableRow, TableRows },

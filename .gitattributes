@@ -8,3 +8,4 @@
 /.gitignore export-ignore
 /.github export-ignore
 /docs/images export-ignore
+/docs/marketplace export-ignore
