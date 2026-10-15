@@ -1,7 +1,5 @@
 <?php
 
-use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
-use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Support\Facades\Route;
 use NineteenNinetyFour\BackInStock\Http\Controllers\ActionsController;
 
@@ -21,17 +19,14 @@ Route::get('back-in-stock.js', [ActionsController::class, 'script'])->name('scri
 // changed: confirming lasts a few days, unsubscribing doesn't expire.
 // Each opens a page with a button, as mail apps and virus checkers open
 // links in emails by themselves; only the button (a POST) does anything.
-// The signature stands in for a CSRF token.
+// The signature stands in for a CSRF token: the service provider exempts
+// these from Laravel's CSRF check.
 Route::get('confirm/{alert}', [ActionsController::class, 'confirmPage'])->name('confirm');
-Route::post('confirm/{alert}', [ActionsController::class, 'confirm'])
-    ->name('confirm.post')
-    ->withoutMiddleware([ValidateCsrfToken::class, VerifyCsrfToken::class]);
+Route::post('confirm/{alert}', [ActionsController::class, 'confirm'])->name('confirm.post');
 
 Route::middleware('signed')->group(function () {
     Route::get('unsubscribe/{alert}', [ActionsController::class, 'unsubscribePage'])->name('unsubscribe');
 
     // Mail apps' one-click unsubscribe (RFC 8058) posts here too.
-    Route::post('unsubscribe/{alert}', [ActionsController::class, 'unsubscribe'])
-        ->name('unsubscribe.post')
-        ->withoutMiddleware([ValidateCsrfToken::class, VerifyCsrfToken::class]);
+    Route::post('unsubscribe/{alert}', [ActionsController::class, 'unsubscribe'])->name('unsubscribe.post');
 });

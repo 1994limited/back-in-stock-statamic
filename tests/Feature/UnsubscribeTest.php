@@ -2,6 +2,9 @@
 
 namespace NineteenNinetyFour\BackInStock\Tests\Feature;
 
+use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
+use Illuminate\Http\Request;
+use Illuminate\Session\TokenMismatchException;
 use Illuminate\Support\Facades\Mail;
 use NineteenNinetyFour\BackInStock\AlertStatus;
 use NineteenNinetyFour\BackInStock\Mail\RestockedMail;
@@ -112,5 +115,35 @@ class UnsubscribeTest extends TestCase
         $this->post($this->waiting()->unsubscribeUrl());
 
         $this->assertSame(hash('sha256', 'reader@example.com'), Suppression::sole()->email_hash);
+    }
+
+    #[Test]
+    public function the_email_links_pass_laravels_csrf_check_without_a_token(): void
+    {
+        $this->book(stock: 0);
+        $alert = $this->asked();
+
+        // Laravel skips its CSRF check in tests, so run it for real.
+        $csrf = new class(app(), app('encrypter')) extends VerifyCsrfToken
+        {
+            protected function runningUnitTests()
+            {
+                return false;
+            }
+        };
+
+        $post = function (string $url) use ($csrf) {
+            $request = Request::create($url, 'POST', ['List-Unsubscribe' => 'One-Click']);
+            $request->setLaravelSession(app('session.store'));
+
+            return $csrf->handle($request, fn () => response('passed'))->getContent();
+        };
+
+        $this->assertSame('passed', $post($alert->unsubscribeUrl()));
+        $this->assertSame('passed', $post($alert->confirmUrl()));
+
+        // Everything else still needs a token.
+        $this->expectException(TokenMismatchException::class);
+        $post(url('/!/back-in-stock/subscribe'));
     }
 }

@@ -2,7 +2,7 @@
 
 ## In the Control Panel
 
-Tools → Addons → Back in Stock → Settings. Anything left empty uses `config/back-in-stock.php`, or the default wording in the site's language.
+Tools → Addons → Back in Stock → Settings (`/cp/addons/back-in-stock-statamic/settings`), or **Settings** on Store → Back in Stock. Anything left empty uses `config/back-in-stock.php`, or the default wording in the site's language.
 
 **Sending**
 

@@ -10,6 +10,8 @@
 
 ## Install
 
+Install and set up [Cargo](https://builtwithcargo.dev/docs/installation) first (`php please cargo:install`, which asks which collection holds your products). Then:
+
 ```bash
 composer require 1994/back-in-stock-statamic
 php artisan migrate

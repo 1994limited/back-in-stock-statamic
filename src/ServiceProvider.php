@@ -4,6 +4,7 @@ namespace NineteenNinetyFour\BackInStock;
 
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Console\Scheduling\Schedule;
+use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Route;
@@ -154,6 +155,17 @@ class ServiceProvider extends AddonServiceProvider
     protected function registerFrontendRoutes(): void
     {
         RateLimiter::for('back-in-stock', fn (Request $request) => Limit::perMinute(max(1, (int) config('back-in-stock.throttle.subscribe', 10)))->by($request->ip()));
+
+        // The links in the emails post without a CSRF token (mail apps'
+        // one-click unsubscribe can't send one); their signature is checked
+        // instead. VerifyCsrfToken's list is shared by Laravel 12's
+        // ValidateCsrfToken and Laravel 13's PreventRequestForgery, and by
+        // a site's own subclass.
+        $actions = trim((string) config('statamic.routes.action', '!'), '/');
+        VerifyCsrfToken::except([
+            $actions.'/back-in-stock/confirm/*',
+            $actions.'/back-in-stock/unsubscribe/*',
+        ]);
 
         Statamic::pushActionRoutes(function () {
             Route::prefix('back-in-stock')->name('back-in-stock.')->group(__DIR__.'/../routes/actions.php');

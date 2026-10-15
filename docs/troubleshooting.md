@@ -15,6 +15,8 @@
 
 **419 Page Expired after sending the form.** The page's CSRF token was out of date. On a statically cached site, Statamic swaps in a fresh token with JavaScript on the full measure: check its script is on the page (see [Templates](templates.md#static-caching)).
 
+**419 Page Expired from the confirm button or a mail app's unsubscribe.** These post without a CSRF token, and Back in Stock exempts them (their signed link is checked instead). If you list your own CSRF exceptions in `bootstrap/app.php` with `validateCsrfTokens()` or `preventRequestForgery()`, that's fine: the lists are merged. If you've replaced Laravel's CSRF middleware with one that ignores its exception list, add `!/back-in-stock/confirm/*` and `!/back-in-stock/unsubscribe/*` to it.
+
 **The message doesn't show after sending.** The page came from the static cache. See [Templates](templates.md#static-caching).
 
 **The confirmation link says it's expired.** Links work for 72 hours (`confirm_hours`). Asking again sends a new one.
