@@ -33,15 +33,24 @@ class SubscribeTest extends TestCase
     }
 
     #[Test]
-    public function the_link_confirms_it(): void
+    public function the_link_opens_a_page_whose_button_confirms_it(): void
     {
         $this->book(stock: 0);
         $alert = $this->asked();
 
-        $this->get($alert->confirmUrl())->assertOk()->assertSee('You’re on the list');
+        // Opening the link (as a mail app's link checker does) changes nothing.
+        $this->get($alert->confirmUrl())
+            ->assertOk()
+            ->assertSee('Email reader@example.com once when The Lantern Ledger is back in stock?')
+            ->assertSee('Yes, email me');
+        $this->assertSame(AlertStatus::Unconfirmed, $this->statusOf($alert));
+
+        // The button does, without a CSRF token: the signature stands in for it.
+        $this->withMiddleware()->post($alert->confirmUrl())->assertOk()->assertSee('You’re on the list');
 
         $this->assertSame(AlertStatus::Waiting, $this->statusOf($alert));
         $this->assertNotNull($alert->confirmed_at);
+        $this->get($alert->confirmUrl())->assertSee('That’s already confirmed');
     }
 
     #[Test]
@@ -50,14 +59,15 @@ class SubscribeTest extends TestCase
         $this->book(stock: 0);
         $alert = $this->asked();
 
-        $this->get($alert->confirmUrl().'x')->assertForbidden();
-        $this->travel(4)->days();
-        $this->get($alert->confirmUrl())->assertOk();
+        $this->post($alert->confirmUrl().'x')->assertForbidden();
+        $this->post('/!/back-in-stock/confirm/'.$alert->id)->assertForbidden();
+        $this->assertSame(AlertStatus::Unconfirmed, $this->statusOf($alert));
 
         $other = $this->asked('other@example.com');
         $url = $other->confirmUrl();
         $this->travel(73)->hours();
         $this->get($url)->assertForbidden()->assertSee('Link expired');
+        $this->post($url)->assertForbidden();
         $this->assertSame(AlertStatus::Unconfirmed, $this->statusOf($other));
     }
 
@@ -68,7 +78,7 @@ class SubscribeTest extends TestCase
         $this->book(stock: 0);
         $alert = $this->asked();
 
-        $this->get($alert->confirmUrl())->assertRedirect('/alerts/confirmed')->assertSessionHas('back_in_stock_success');
+        $this->post($alert->confirmUrl())->assertRedirect('/alerts/confirmed')->assertSessionHas('back_in_stock_success');
     }
 
     #[Test]

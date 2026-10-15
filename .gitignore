@@ -5,4 +5,3 @@ composer.lock
 .DS_Store
 /resources/dist/hot
 /tests/__fixtures__/tmp
-/tests/__fixtures__/tmp

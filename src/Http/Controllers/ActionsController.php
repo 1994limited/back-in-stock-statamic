@@ -98,16 +98,39 @@ class ActionsController
         return $this->done($request, __('back-in-stock::messages.cancelled'), $alert->product_id.'|'.$alert->variant);
     }
 
+    /**
+     * The link in the confirmation email: a page with a button, so a link
+     * checker opening it doesn't confirm anything.
+     */
+    public function confirmPage(Request $request, string $alert): Response
+    {
+        $alert = Alert::find($alert);
+
+        if (! $alert || ! $request->hasValidSignature() || $alert->status === AlertStatus::Cancelled) {
+            return $this->page('expired_title', __('back-in-stock::messages.errors.expired'), $alert, status: 403);
+        }
+
+        if ($alert->status !== AlertStatus::Unconfirmed) {
+            return $this->page('confirmed_title', __('back-in-stock::messages.already_confirmed'), $alert);
+        }
+
+        $product = $alert->item?->product();
+
+        return $this->page('confirm_title', __('back-in-stock::messages.page.confirm_text', [
+            'product' => $product?->name() ?? $alert->product_id,
+            'email' => $alert->email,
+        ]), $alert, [
+            'action' => $request->fullUrl(),
+            'button' => Settings::text('confirm_button', ['product' => $product?->name() ?? ''], $alert->locale),
+        ]);
+    }
+
     public function confirm(Request $request, string $alert): Response|RedirectResponse
     {
         $alert = Alert::find($alert);
 
-        if (! $alert || ! $request->hasValidSignature()) {
-            return $this->page('expired_title', __('back-in-stock::messages.errors.expired'), status: 403);
-        }
-
-        if ($alert->status === AlertStatus::Cancelled) {
-            return $this->page('expired_title', __('back-in-stock::messages.errors.expired'), $alert, status: 410);
+        if (! $alert || ! $request->hasValidSignature() || $alert->status === AlertStatus::Cancelled) {
+            return $this->page('expired_title', __('back-in-stock::messages.errors.expired'), $alert, status: 403);
         }
 
         $message = $this->backInStock->confirm($alert)

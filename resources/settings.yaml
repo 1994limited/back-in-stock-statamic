@@ -93,7 +93,7 @@ tabs:
             field:
               type: text
               display: Heading
-              placeholder: 'One click to confirm'
+              placeholder: 'Confirm your alert'
           -
             handle: confirm_intro
             field:

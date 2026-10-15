@@ -37,7 +37,7 @@ return [
     'defaults' => [
         'consent_text' => 'Email me once when it’s back in stock. Nothing else.',
         'confirm_subject' => 'Confirm your back-in-stock alert for :product',
-        'confirm_heading' => 'One click to confirm',
+        'confirm_heading' => 'Confirm your alert',
         'confirm_intro' => 'You asked :site to let you know when :product is back in stock. Confirm it’s you, and we’ll email you once when it is.',
         'confirm_button' => 'Yes, email me',
         'confirm_ignore' => 'Didn’t ask? Ignore this email and you won’t hear from us.',
@@ -55,6 +55,8 @@ return [
     ],
 
     'page' => [
+        'confirm_title' => 'Confirm your alert',
+        'confirm_text' => 'Email :email once when :product is back in stock?',
         'confirmed_title' => 'You’re on the list',
         'unsubscribe_title' => 'Unsubscribe?',
         'unsubscribe_text' => 'Stop all back-in-stock emails to :email?',

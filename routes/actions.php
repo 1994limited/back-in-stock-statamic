@@ -16,13 +16,18 @@ Route::middleware('throttle:back-in-stock')->group(function () {
 
 // The links in the emails. They're signed, so they can't be guessed or
 // changed: confirming lasts a few days, unsubscribing doesn't expire.
-Route::get('confirm/{alert}', [ActionsController::class, 'confirm'])->name('confirm');
+// Each opens a page with a button, as mail apps and virus checkers open
+// links in emails by themselves; only the button (a POST) does anything.
+// The signature stands in for a CSRF token.
+Route::get('confirm/{alert}', [ActionsController::class, 'confirmPage'])->name('confirm');
+Route::post('confirm/{alert}', [ActionsController::class, 'confirm'])
+    ->name('confirm.post')
+    ->withoutMiddleware([ValidateCsrfToken::class, VerifyCsrfToken::class]);
 
 Route::middleware('signed')->group(function () {
     Route::get('unsubscribe/{alert}', [ActionsController::class, 'unsubscribePage'])->name('unsubscribe');
 
-    // Mail apps' one-click unsubscribe (RFC 8058) posts here without a
-    // CSRF token; the signature stands in for it.
+    // Mail apps' one-click unsubscribe (RFC 8058) posts here too.
     Route::post('unsubscribe/{alert}', [ActionsController::class, 'unsubscribe'])
         ->name('unsubscribe.post')
         ->withoutMiddleware([ValidateCsrfToken::class, VerifyCsrfToken::class]);
