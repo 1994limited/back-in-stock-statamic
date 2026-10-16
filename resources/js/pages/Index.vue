@@ -6,7 +6,7 @@
 import { Head, Link, router } from '@statamic/cms/inertia';
 import { Button, Header, Input, Panel, Select, Table, TableCell, TableColumn, TableColumns, TableRow, TableRows } from '@statamic/cms/ui';
 import Stock from '../components/Stock.vue';
-import icon from '../icon.js';
+import icon from '../../brand/nav-icon.svg?raw';
 
 export default {
     components: { Button, Head, Header, Input, Link, Panel, Select, Stock, Table, TableCell, TableColumn, TableColumns, TableRow, TableRows },
