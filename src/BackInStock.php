@@ -2,6 +2,7 @@
 
 namespace NineteenNinetyFour\BackInStock;
 
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\RateLimiter;
@@ -62,48 +63,64 @@ class BackInStock
             throw BackInStockException::because('in_stock', 'product');
         }
 
-        $existing = Alert::query()
-            ->forEmail($email)
-            ->where('product_id', $product->id())
-            ->where('variant', $product->variantKey())
-            ->open()
-            ->first();
+        // One request at a time per address and product, so two forms sent
+        // at once can't both make one.
+        $lock = Cache::lock('back-in-stock:subscribe:'.Suppression::hash($email.'|'.$product->id().'|'.$product->variantKey()), 10);
 
-        if ($existing) {
-            if ($existing->status === AlertStatus::Unconfirmed
-                && (! $existing->confirmation_sent_at || $existing->confirmation_sent_at->lt(now()->subMinutes(5)))) {
-                $this->sendConfirmation($existing);
+        $alert = $lock->block(5, function () use ($product, $email, $site, $user, $consent) {
+            $existing = Alert::query()
+                ->forEmail($email)
+                ->where('product_id', $product->id())
+                ->where('variant', $product->variantKey())
+                ->open()
+                ->first();
+
+            if ($existing) {
+                if ($existing->status === AlertStatus::Unconfirmed
+                    && (! $existing->confirmation_sent_at || $existing->confirmation_sent_at->lt(now()->subMinutes(5)))) {
+                    $this->sendConfirmation($existing);
+                }
+
+                return $existing;
             }
 
-            return $existing;
-        }
+            $open = Alert::query()->forEmail($email)->open()->count();
 
-        $open = Alert::query()->forEmail($email)->open()->count();
+            if ($open >= max(1, (int) config('back-in-stock.throttle.per_address', 50))) {
+                throw BackInStockException::because('too_many');
+            }
 
-        if ($open >= max(1, (int) config('back-in-stock.throttle.per_address', 50))) {
-            throw BackInStockException::because('too_many');
-        }
+            if ($this->tooManyConfirmations($email)) {
+                throw BackInStockException::because('too_fast', 'email', 429);
+            }
 
-        if ($this->tooManyConfirmations($email)) {
-            throw BackInStockException::because('too_fast', 'email', 429);
-        }
+            $item = Item::for($product->id(), $product->variantKey());
 
-        $item = Item::for($product->id(), $product->variantKey());
+            // Nobody was waiting, so its stock hasn't been watched: start
+            // again from the stock now, or a rise could be missed.
+            if (! $item->wasRecentlyCreated && ! $item->alerts()->open()->exists()) {
+                $item->update(['stock' => $product->stock(), 'stock_tracked' => $product->tracksStock()]);
+            }
 
-        $alert = $item->alerts()->create([
-            'product_id' => $product->id(),
-            'variant' => $product->variantKey(),
-            'site' => $site->handle(),
-            'locale' => $site->lang(),
-            'email' => $email,
-            'user_id' => $user?->id(),
-            'status' => AlertStatus::Unconfirmed,
-            'consent' => $consent !== null ? mb_substr($consent, 0, 2000) : null,
-        ]);
+            $alert = $item->alerts()->create([
+                'product_id' => $product->id(),
+                'variant' => $product->variantKey(),
+                'site' => $site->handle(),
+                'locale' => $site->lang(),
+                'email' => $email,
+                'user_id' => $user?->id(),
+                'status' => AlertStatus::Unconfirmed,
+                'consent' => $consent !== null ? mb_substr($consent, 0, 2000) : null,
+            ]);
 
-        AlertCreated::dispatch($alert);
+            AlertCreated::dispatch($alert);
 
-        $this->sendConfirmation($alert);
+            // Inside the lock, so a second form sent at the same moment
+            // finds the email already sent.
+            $this->sendConfirmation($alert);
+
+            return $alert;
+        });
 
         return $alert;
     }

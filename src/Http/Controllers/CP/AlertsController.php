@@ -255,7 +255,7 @@ class AlertsController extends CpController
      */
     protected function itemsQuery(?string $search, string $show): Builder
     {
-        $query = Item::query()->withCount($this->counts());
+        $query = Item::query()->with('latestRestock')->withCount($this->counts());
 
         if ($show === 'waiting') {
             $query->whereHas('alerts', fn ($q) => $q->whereIn('status', [AlertStatus::Waiting->value, AlertStatus::Unconfirmed->value, AlertStatus::Sending->value]));
@@ -294,7 +294,7 @@ class AlertsController extends CpController
     protected function itemRow(Item $item): array
     {
         $product = $item->product();
-        $lastRestock = $item->restocks()->latest('id')->first();
+        $lastRestock = $item->latestRestock;
 
         return [
             'id' => $item->id,

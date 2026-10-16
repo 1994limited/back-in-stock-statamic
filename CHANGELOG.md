@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.0.1 (unreleased)
+
+### Fixed
+- **"As many as came back" counts units sold during the wait.** Put 5 back, sell 3 before the emails go, and 2 people are emailed, not 5. What's lined up never goes over the stock.
+- **Emails lined up while others are sending are no longer lost.** A restock (or a confirmation) during a send is sent too. Without a queue, sending now starts after the product's save has finished, so saves during a send don't wait.
+- **A product asked about again starts from its stock now.** If its stock changed while nobody was waiting, a rise after that could be missed.
+- **Confirming while it's in stock** sets the next email off straight away, as documented: to everyone with "Everyone waiting", or to whoever has waited longest with "As many as came back".
+- **One email per address.** Two forms sent at the same moment make one request and one confirmation email; if two requests for the same thing do exist, only one is emailed.
+- **Restock history is kept for a year** after the last request for a product is deleted, for the Control Panel.
+
+### Changed
+- **A new migration** adds a column to `back_in_stock_items`. Run `php artisan migrate` after updating.
+- The Control Panel list loads each product's last restock in one query.
+- The brand SVGs no longer carry embedded metadata.
+
 ## 1.0.0 (2026-10-15)
 
 The first release.

@@ -3,6 +3,7 @@
 namespace NineteenNinetyFour\BackInStock\Models;
 
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Carbon;
 use NineteenNinetyFour\BackInStock\AlertStatus;
 use NineteenNinetyFour\BackInStock\Cargo\Product;
@@ -20,6 +21,7 @@ use NineteenNinetyFour\BackInStock\Cargo\Stock;
  * @property bool $stock_tracked
  * @property bool $pending
  * @property int|null $pending_limit
+ * @property int $pending_version
  * @property Carbon|null $send_after
  * @property Carbon|null $restocked_at
  */
@@ -42,6 +44,7 @@ class Item extends Model
             'stock_tracked' => 'boolean',
             'pending' => 'boolean',
             'pending_limit' => 'integer',
+            'pending_version' => 'integer',
             'send_after' => 'datetime',
             'restocked_at' => 'datetime',
         ];
@@ -63,6 +66,11 @@ class Item extends Model
     public function restocks(): HasMany
     {
         return $this->hasMany(Restock::class);
+    }
+
+    public function latestRestock(): HasOne
+    {
+        return $this->hasOne(Restock::class)->latestOfMany();
     }
 
     public function waiting(): HasMany

@@ -3,6 +3,7 @@
 namespace NineteenNinetyFour\BackInStock;
 
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\RateLimiter;
@@ -25,6 +26,9 @@ class Sender
 {
     public const RATE_KEY = 'back-in-stock:emails';
 
+    /** The most people one pass looks at; the rest go in the next. */
+    public const BATCH = 500;
+
     /**
      * Send what's due for one product or variant. Returns how many were emailed.
      */
@@ -36,12 +40,26 @@ class Sender
             return 0;
         }
 
+        $this->again = false;
+
         try {
-            return $this->sendLocked($item, $force);
+            $sent = $this->sendLocked($item, $force);
         } finally {
             $lock->release();
         }
+
+        // More to send (lined up meanwhile, or past one pass): with a
+        // queue, a new job. Without one, back-in-stock:check carries on in
+        // a few minutes, rather than sending on and on in this request.
+        if ($this->again && SendAlerts::canWait()) {
+            SendAlerts::dispatchFor($item->refresh());
+        }
+
+        return $sent;
     }
+
+    /** Whether more emails were lined up while sending. */
+    protected bool $again = false;
 
     protected function sendLocked(Item $item, bool $force): int
     {
@@ -55,20 +73,55 @@ class Sender
             return 0;
         }
 
+        $version = (int) $item->pending_version;
         $product = $item->product();
 
         // Sold out again (a mistyped stock level put right, say), gone or
         // not live: nothing to send. Stock coming back starts again.
         if (! $product || ! $product->isAvailable() || $product->isSoldOut()) {
-            $this->finish($item);
+            $this->finish($item, $version);
 
             return 0;
         }
 
-        $remaining = $item->pending_limit;
         $sent = 0;
+        $tries = 0;
 
-        while ($remaining === null || $remaining > 0) {
+        while (true) {
+            // A bounded pass: anything left goes in the next one.
+            if (++$tries > static::BATCH) {
+                $this->again = true;
+                $this->recordSent($item, $sent);
+
+                return $sent;
+            }
+
+            // What's left to send, as it is now: units sold since the
+            // restock come off it, and anything lined up meanwhile is added.
+            $item->refresh();
+            $limit = $item->pending_limit;
+            $item->stock = ($item->product() ?? $product)->stock();
+            app(Watcher::class)->capToStock($item);
+            $remaining = $item->pending_limit;
+
+            if ($remaining !== null && $limit !== null && $remaining < $limit) {
+                // Only if nothing was lined up since this was read: that
+                // would be lost. If it was, read it again.
+                $capped = Item::query()
+                    ->whereKey($item->id)
+                    ->where('pending_version', $item->pending_version)
+                    ->where('pending_limit', $limit)
+                    ->update(['pending_limit' => $remaining]);
+
+                if (! $capped) {
+                    continue;
+                }
+            }
+
+            if ($remaining !== null && $remaining <= 0) {
+                break;
+            }
+
             $alert = $item->waiting()->orderBy('confirmed_at')->orderBy('created_at')->first();
 
             if (! $alert) {
@@ -76,7 +129,7 @@ class Sender
             }
 
             if (RateLimiter::tooManyAttempts(self::RATE_KEY, Settings::perMinute())) {
-                $this->later($item, $remaining, RateLimiter::availableIn(self::RATE_KEY));
+                $this->later($item, RateLimiter::availableIn(self::RATE_KEY), $remaining);
                 $this->recordSent($item, $sent);
 
                 return $sent;
@@ -86,7 +139,7 @@ class Sender
 
             if ($result === null) {
                 // A mail problem: try again later, from this one.
-                $this->later($item, $remaining, 60);
+                $this->later($item, 60, $remaining);
                 $this->recordSent($item, $sent);
 
                 return $sent;
@@ -94,11 +147,14 @@ class Sender
 
             if ($result) {
                 $sent++;
-                $remaining = $remaining === null ? null : $remaining - 1;
+
+                if ($remaining !== null) {
+                    Item::query()->whereKey($item->id)->update(['pending_limit' => DB::raw('case when pending_limit > 0 then pending_limit - 1 else 0 end')]);
+                }
             }
         }
 
-        $this->finish($item);
+        $this->finish($item, $version);
         $this->recordSent($item, $sent);
 
         return $sent;
@@ -122,7 +178,19 @@ class Sender
 
         $alert->refresh();
 
-        if (Suppression::blocks($alert)) {
+        // Unsubscribed since, or a second request for the same thing from
+        // the same address (two forms sent at once) that's been emailed.
+        // When two are being sent at once, the older one goes.
+        $duplicate = Alert::query()
+            ->where('item_id', $alert->item_id)
+            ->where('email', $alert->email)
+            ->whereKeyNot($alert->id)
+            ->where(fn ($query) => $query
+                ->whereIn('status', [AlertStatus::Notified->value, AlertStatus::Converted->value])
+                ->orWhere(fn ($query) => $query->where('status', AlertStatus::Sending->value)->where('id', '<', $alert->id)))
+            ->exists();
+
+        if ($duplicate || Suppression::blocks($alert)) {
             $alert->forceFill(['status' => AlertStatus::Cancelled, 'cancelled_at' => now(), 'claimed_at' => null])->save();
             AlertCancelled::dispatch($alert);
 
@@ -178,23 +246,33 @@ class Sender
             ->sum(fn (Item $item) => $this->send($item));
     }
 
-    protected function later(Item $item, ?int $remaining, int $seconds): void
+    protected function later(Item $item, int $seconds, ?int $remaining): void
     {
-        $item->forceFill([
-            'pending_limit' => $remaining,
+        // pending_limit is already counted down as emails go; just wait.
+        Item::query()->whereKey($item->id)->update([
             'send_after' => now()->addSeconds(max(1, $seconds)),
-        ])->save();
+        ]);
 
         if (SendAlerts::canWait()) {
-            SendAlerts::dispatchFor($item);
+            SendAlerts::dispatchFor($item->refresh());
         }
 
         // Without a queue, back-in-stock:check carries on in a few minutes.
     }
 
-    protected function finish(Item $item): void
+    /**
+     * Done, unless more was lined up while sending (the version moved on).
+     */
+    protected function finish(Item $item, int $version): void
     {
-        $item->forceFill(['pending' => false, 'pending_limit' => null, 'send_after' => null])->save();
+        $finished = Item::query()
+            ->whereKey($item->id)
+            ->where('pending_version', $version)
+            ->update(['pending' => false, 'pending_limit' => null, 'send_after' => null]);
+
+        if (! $finished) {
+            $this->again = true;
+        }
     }
 
     protected function recordSent(Item $item, int $sent): void

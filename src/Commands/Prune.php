@@ -41,7 +41,14 @@ class Prune extends Command
                 ->delete();
         }
 
-        $items = Item::query()->doesntHave('alerts')->where('updated_at', '<', now()->subDay())->delete();
+        // Products nobody is waiting for any more, unless they came back in
+        // stock in the last year: their restocks are kept for the Control
+        // Panel (they hold no personal data).
+        $items = Item::query()
+            ->doesntHave('alerts')
+            ->whereDoesntHave('restocks', fn ($query) => $query->where('created_at', '>=', now()->subYear()))
+            ->where('updated_at', '<', now()->subDay())
+            ->delete();
 
         $this->components->info("{$deleted} old requests deleted, {$items} products no longer watched.");
 

@@ -18,16 +18,16 @@ Stock that stops being counted (the stock field emptied) counts as back in stock
 People are emailed oldest request first (by when they confirmed), once each. With **Who to email** set to:
 
 - **Everyone waiting** (the default): everyone who has confirmed.
-- **As many as came back**: as many as units came back, times the multiplier. Put 3 back in stock with a multiplier of 2, and the 6 people who asked first are emailed. The rest keep waiting. When more comes back, the next ones are emailed. Nobody's emailed when stock goes down, as items sell.
+- **As many as came back**: as many as units came back, times the multiplier. Put 3 back in stock with a multiplier of 2, and the 6 people who asked first are emailed. The rest keep waiting. When more comes back, the next ones are emailed. Nobody's emailed when stock goes down, as items sell, and units sold before the emails go come off: put 5 back, sell 3 during the wait, and 2 people are emailed.
 
-Someone who confirms while it's already in stock (the page they asked on was out of date) is emailed straight away.
+Someone who confirms while it's already in stock (the page they asked on was out of date) sets the next email off straight away. With "Everyone waiting", that's to everyone, them included. With "As many as came back", it's to whoever has waited longest, while there's stock for them.
 
 **Email them now.** On a product's page in the Control Panel, "Email them now" emails everyone waiting, whatever the setting.
 
 ## When
 
 - **With a queue**, emails go after the delay (5 minutes by default). Then the stock is checked again: if it's sold out again (a mistyped stock level put right), nobody's emailed. If the product was unpublished, nobody's emailed either.
-- **Without a queue** (the `sync` driver), there's no delay: emails go once the page that saved the product has loaded.
+- **Without a queue** (the `sync` driver), there's no delay: emails go once the page that saved the product has loaded, up to 500 at a time. Any more go with the next `back-in-stock:check`.
 
 No more than the **Emails a minute** setting go each minute. The rest go in the following minutes: from the queue, or from `back-in-stock:check` without one. A shop with 500 people waiting on a mail provider allowing 100 a minute sends them over five minutes.
 

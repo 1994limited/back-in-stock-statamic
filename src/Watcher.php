@@ -3,6 +3,7 @@
 namespace NineteenNinetyFour\BackInStock;
 
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use NineteenNinetyFour\BackInStock\Events\ProductRestocked;
 use NineteenNinetyFour\BackInStock\Jobs\SendAlerts;
 use NineteenNinetyFour\BackInStock\Models\Alert;
@@ -58,7 +59,9 @@ class Watcher
      */
     public function check(Item $item, string $trigger): ?Restock
     {
-        return Cache::lock('back-in-stock:watch:'.$item->id, 30)->block(10, function () use ($item, $trigger) {
+        $queued = false;
+
+        $restock = Cache::lock('back-in-stock:watch:'.$item->id, 30)->block(10, function () use ($item, $trigger, &$queued) {
             $item->refresh();
             $product = $item->product();
 
@@ -92,6 +95,8 @@ class Watcher
 
             $restocked = $wasOut || ($allowance !== null && $allowance > 0);
 
+            // Anything sold since emails were lined up comes off what's left to send.
+            $this->capToStock($item);
             $item->save();
 
             if ($allowance === 0 || ! $item->waiting()->exists()) {
@@ -104,52 +109,106 @@ class Watcher
                 'trigger' => $trigger,
             ]) : null;
 
-            $this->queue($item, $allowance);
-
-            if ($restock) {
-                ProductRestocked::dispatch($item, $restock);
-            }
+            $this->queue($item, $allowance, dispatch: false);
+            $queued = true;
 
             return $restock;
         });
+
+        // Outside the lock: without a queue, sending starts straight away,
+        // and saves made meanwhile need the lock.
+        if ($restock) {
+            ProductRestocked::dispatch($item, $restock);
+        }
+
+        if ($queued) {
+            SendAlerts::dispatchFor($item->refresh());
+        }
+
+        return $restock;
     }
 
     /**
      * Line up emails for a product or variant: to this many more people,
      * or everyone waiting (null). Sent after the delay.
      */
-    public function queue(Item $item, ?int $allowance, ?int $delayMinutes = null): void
+    public function queue(Item $item, ?int $allowance, ?int $delayMinutes = null, bool $dispatch = true): void
     {
-        $alreadyAll = $item->pending && $item->pending_limit === null;
+        DB::connection($item->getConnectionName())->transaction(function () use ($item, $allowance, $delayMinutes) {
+            $fresh = Item::query()->lockForUpdate()->find($item->id) ?? $item;
 
-        $item->pending_limit = $alreadyAll || $allowance === null
-            ? null
-            : ($item->pending ? (int) $item->pending_limit : 0) + $allowance;
+            $alreadyAll = $fresh->pending && $fresh->pending_limit === null;
 
-        if (! $item->pending || $item->send_after === null) {
-            $item->send_after = now()->addMinutes(SendAlerts::canWait() ? ($delayMinutes ?? Settings::delay()) : 0);
+            $fresh->pending_limit = $alreadyAll || $allowance === null
+                ? null
+                : ($fresh->pending ? max(0, (int) $fresh->pending_limit) : 0) + $allowance;
+
+            if (! $fresh->pending || $fresh->send_after === null) {
+                $fresh->send_after = now()->addMinutes(SendAlerts::canWait() ? ($delayMinutes ?? Settings::delay()) : 0);
+            }
+
+            $fresh->pending = true;
+            $fresh->pending_version = (int) $fresh->pending_version + 1;
+            $fresh->restocked_at = now();
+
+            if ($allowance !== null) {
+                $this->capToStock($fresh);
+            }
+
+            $fresh->save();
+            $item->setRawAttributes($fresh->getAttributes(), true);
+        });
+
+        if ($dispatch) {
+            SendAlerts::dispatchFor($item);
+        }
+    }
+
+    /**
+     * With "as many as came back", never line up more emails than there's
+     * stock for (times the multiplier): units sold since a restock come off.
+     */
+    public function capToStock(Item $item): void
+    {
+        if (! $item->pending || $item->pending_limit === null || ! $item->stock_tracked || Settings::limit() !== 'stock') {
+            return;
         }
 
-        $item->pending = true;
-        $item->restocked_at = now();
-        $item->save();
-
-        SendAlerts::dispatchFor($item);
+        $item->pending_limit = min((int) $item->pending_limit, max(0, (int) $item->stock) * Settings::multiplier());
     }
 
     /**
      * When someone confirms while it's already in stock (the page they
-     * asked on was out of date, say), email them straight away.
+     * asked on was out of date, say), the next email goes straight away:
+     * with "everyone waiting", to everyone, them included; with "as many as
+     * came back", to whoever has waited longest, if there's stock for one
+     * more.
      */
     public function confirmedWhileInStock(Alert $alert): void
     {
         $item = $alert->item;
-        $product = $item?->product();
 
-        if (! $item || ! $product || ! $product->isAvailable() || $product->isSoldOut()) {
+        if (! $item) {
             return;
         }
 
-        $this->queue($item, 1, 0);
+        $queued = Cache::lock('back-in-stock:watch:'.$item->id, 30)->block(10, function () use ($item) {
+            $item->refresh();
+            $product = $item->product();
+
+            if (! $product || ! $product->isAvailable() || $product->isSoldOut()) {
+                return false;
+            }
+
+            $item->forceFill(['stock' => $product->stock(), 'stock_tracked' => $product->tracksStock()])->save();
+
+            $this->queue($item, Settings::limit() === 'stock' && $product->tracksStock() ? 1 : null, 0, dispatch: false);
+
+            return true;
+        });
+
+        if ($queued) {
+            SendAlerts::dispatchFor($item->refresh());
+        }
     }
 }
