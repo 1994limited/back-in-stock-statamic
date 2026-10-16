@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.0.1 (unreleased)
+## 1.0.1 (2026-10-16)
 
 ### Fixed
 - **"As many as came back" counts units sold during the wait.** Put 5 back, sell 3 before the emails go, and 2 people are emailed, not 5. What's lined up never goes over the stock.
