@@ -2,7 +2,7 @@
 
 "Tell me when it's back" for [Cargo](https://builtwithcargo.dev). Shoppers leave their email on a sold-out product, or a sold-out variant, and confirm it. When it's back in stock, they get one email. You see what people are waiting for, and who bought when it came back.
 
-![Back in Stock for Statamic and Cargo](docs/marketplace/cover-1600x900.png)
+![Back in Stock for Statamic and Cargo](https://raw.githubusercontent.com/1994limited/statamic-marketplace/main/back-in-stock/cover-1600x900.png)
 
 ## Features
 
@@ -19,7 +19,7 @@
 
 | The form | The Control Panel | The email |
 | --- | --- | --- |
-| ![A sold-out hardback with the Tell me when it's back form](docs/images/shop-form.png) | ![Store → Back in Stock](docs/images/cp-index.png) | ![The back-in-stock email](docs/images/email.png) |
+| ![A sold-out hardback with the Tell me when it's back form](https://raw.githubusercontent.com/1994limited/statamic-marketplace/main/back-in-stock/charts/shop-form.png) | ![Store → Back in Stock](https://raw.githubusercontent.com/1994limited/statamic-marketplace/main/back-in-stock/charts/cp-index.png) | ![The back-in-stock email](https://raw.githubusercontent.com/1994limited/statamic-marketplace/main/back-in-stock/charts/email.png) |
 
 The screenshots are from Dog-ear Books, a made-up shop built only with the tags in [the docs](docs/README.md). **[Try the demo](https://github.com/1994limited/back-in-stock-statamic-demo)**: it runs locally in a few commands, with no licence needed. See [The demo shop](docs/demo.md).
 
